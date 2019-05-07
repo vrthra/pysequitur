@@ -273,9 +273,59 @@ class Grammar:
         if self.digram_index.get(digram.hash_value()) == digram:
             self.digram_index[digram.hash_value()] = None
 
-    def print_grammar(self):
+    def get_grammar(self):
         rule_set = [self.root_production]
         g = {}
         for i,rule in enumerate(rule_set):
             g["<%d>" % i] = rule.print_rule(rule_set)
         return g
+
+    def count_tokens(self, rule):
+        res = []
+        for t in rule:
+            if not res:
+                res.append([t, 1])
+            else:
+                if res[-1][0] == t:
+                    res[-1][1] += 1
+                else:
+                    res.append([t, 1])
+        return res
+
+
+    def counter(self, g):
+        g_ = {}
+        for k in g:
+            alts = []
+            a = self.count_tokens(g[k])
+            g_[k] = a
+        return g_
+
+    def seq_to_flat(self, seq, g):
+        my_seq = []
+        for s in seq:
+            token, count = s
+            seq_, count_ = self.token_to_flat(token, g)
+            my_seq.append((seq_, count * count_))
+        return (my_seq, 1)
+
+    def token_to_flat(self, token, g):
+        if (token[0], token[-1]) != ('<', '>'):
+            return (token, 1)
+        rule = g[token]
+        if len(rule) == 1:
+            t, count = rule[0]
+            t_, count_ = self.token_to_flat(t, g)
+            return (t_, count*count_)
+        else:
+            return self.seq_to_flat(rule, g)
+
+    def g_to_flat(self, g):
+        return self.token_to_flat('<0>', g)
+
+    def flatten(self):
+        g = self.get_grammar()
+        c = self.counter(g) 
+        r = self.g_to_flat(c)
+        return r
+
